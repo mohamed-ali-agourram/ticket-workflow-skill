@@ -179,20 +179,22 @@ One check = the smallest block of actions that ends in a single observable outco
    - the numbered steps for that check
    - one bold **Expected:** line
    - a closing prompt to reply pass/fail (with what they saw if it fails)
-3. **Do not send the next check until the user replies.** No batching, no "and then also try…", no previewing later checks. Their reply is the gate.
-4. **On pass:** record it and send the next check.
-5. **On fail:** stop advancing. Diagnose, fix, run the automated checks again, then re-issue *that same check* for retest. Only move on once it passes or the user explicitly says to skip it.
-6. **Order:** follow the ticket's own structure in the ticket's exact order — numbered issues → `Issue <n>`, numbered acceptance criteria → `AC <n>`. Never invent your own ordering or numbering.
-7. **Coverage per issue:** the failure the ticket reported, the happy path, then invalid input, permission/role variations, and empty or boundary states where they apply. Finish with a short set of regression checks for adjacent existing behaviour.
-8. **Self-contained checks:** if a check needs setup that another fix provides, write that setup out as ordinary steps rather than pointing at another section.
-9. **Final message:** once every check has passed (or been skipped), give a short recap — checks passed, anything skipped, anything fixed mid-run.
+3. **Always give full, copy-pasteable URLs — never bare paths.** Write `https://dev.example.localhost/reports/33/edit`, not `/reports/33/edit`, and append the login parameter whenever the step involves a different user (e.g. `?mcp_user_email=store@manager.com`). Discover the environment's real base URL from the repo or the user rather than assuming one.
+4. **Do not send the next check until the user replies.** No batching, no "and then also try…", no previewing later checks. Their reply is the gate.
+5. **On pass:** record it and send the next check.
+6. **On fail:** stop advancing. Diagnose, fix, run the automated checks again, then re-issue *that same check* for retest. Only move on once it passes or the user explicitly says to skip it.
+7. **Order:** follow the ticket's own structure in the ticket's exact order — numbered issues → `Issue <n>`, numbered acceptance criteria → `AC <n>`. Never invent your own ordering or numbering.
+8. **Coverage per issue:** the failure the ticket reported, the happy path, then invalid input, permission/role variations, and empty or boundary states where they apply. Finish with a short set of regression checks for adjacent existing behaviour.
+9. **No redundant checks.** Before writing a check, confirm no earlier check already proved it. If the user points out an overlap, drop the duplicate and renumber that issue's checks rather than defending it.
+10. **Self-contained checks:** if a check needs setup that another fix provides, write that setup out as ordinary steps rather than pointing at another section.
+11. **Final message:** once every check has passed (or been skipped), give a short recap — checks passed, anything skipped, anything fixed mid-run.
 
 ### Example output shape (Phase 5)
 
 **Message 1**
 
 ```markdown
-**Login:** add `?mcp_user_email=<email>` to any URL.
+**Login:** append `?mcp_user_email=<email>` to any URL on `https://dev.example.localhost`.
 - Admin: `admin@example.com`
 - Store manager: `store@manager.com` (org unit `Frank Canyon`)
 
@@ -208,7 +210,7 @@ Ready when you are — tell me when you're logged in and I'll send the first che
 ```markdown
 **Issue 1 — Archive button missing on product detail · check 1 of 2**
 
-1. As admin, go to `/products/1`
+1. As admin, go to `https://dev.example.localhost/products/1`
 2. Click **Archive**
 3. Confirm the dialog
 

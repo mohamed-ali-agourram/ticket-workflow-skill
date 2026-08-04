@@ -22,7 +22,7 @@ Then a final group of regression checks. Never renumber or reorder the ticket's 
 ## Message 1 — setup only
 
 ```markdown
-**Login:** add `?mcp_user_email=<email>` to any URL.
+**Login:** append `?mcp_user_email=<email>` to any URL on `https://dev.example.localhost`.
 - Admin: `admin@example.com` (peak org unit `Domain`)
 - Store manager: `store@manager.com` (org unit `Frank Canyon`)
 
@@ -39,7 +39,7 @@ Tell me when setup is ready and I'll send the first check.
 ```markdown
 **Issue <n> — <ticket wording> · check <i> of <total>**
 
-1. As <role>, go to `/exact/url`
+1. As <role>, go to `https://dev.example.localhost/exact/url`
 2. Click **Exact Button Label**
 3. Type `exact value` into **Field Name**
 
@@ -63,5 +63,7 @@ Fixed mid-run: <what changed, if anything>.
 - On fail: stop, diagnose, fix, re-run the automated checks, then re-issue **the same check**. Advance only on pass or an explicit skip.
 - Real logins, real record ids, real captions from the environment — query the database for them rather than writing placeholders.
 - Every step names an exact URL, element label, or typed value. Never "verify it works correctly".
+- URLs are always full and copy-pasteable — scheme + host + path, plus the login parameter when the step switches user. Never a bare path like `/reports/33/edit`.
+- No redundant checks: if an earlier check already proved it, drop it and renumber.
 - Each check stands alone: if it needs setup another fix provides, write that setup out as ordinary steps.
 - Across the checks for an issue, cover the reported failure, the happy path, and then invalid input, permission/role variations, and empty or boundary states where they apply.
