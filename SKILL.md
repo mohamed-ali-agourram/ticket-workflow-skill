@@ -26,11 +26,12 @@ description: >
 **Goal:** produce a complete, stable spec before any planning begins.
 
 Steps:
-1. Parse the ticket into: goal, functional requirements, acceptance criteria, implicit expectations, edge cases, explicit non-goals / out of scope.
-2. Assign each distinct requirement a stable ID: `SPEC-1`, `SPEC-2`, … Do not renumber or reuse IDs across the conversation.
-3. List every ambiguity and unstated assumption separately (see template). State the assumption chosen and the risk if wrong.
-4. Explore the repo to map specs to concrete code: read relevant files, grep for related symbols, check existing patterns and prior art. Name the actual files, models, migrations, API types/resolvers/endpoints, services, components, and tests likely involved.
-5. Output the completed spec table (template: `templates/spec-table.md`).
+1. Check the current git branch. If it is `develop`/`main` or a branch belonging to a different ticket, create (or switch to an existing) branch named `STOR-<ticket-number>-<short-description>` — no more than 25 characters total — for this ticket before doing anything else.
+2. Parse the ticket into: goal, functional requirements, acceptance criteria, implicit expectations, edge cases, explicit non-goals / out of scope.
+3. Assign each distinct requirement a stable ID: `SPEC-1`, `SPEC-2`, … Do not renumber or reuse IDs across the conversation.
+4. List every ambiguity and unstated assumption separately (see template). State the assumption chosen and the risk if wrong.
+5. Explore the repo to map specs to concrete code: read relevant files, grep for related symbols, check existing patterns and prior art. Name the actual files, models, migrations, API types/resolvers/endpoints, services, components, and tests likely involved.
+6. Output the completed spec table (template: `templates/spec-table.md`).
 
 **Gate:** Phase 1 is done when the spec table is written out in full. Do not proceed to Phase 2 until then.
 
