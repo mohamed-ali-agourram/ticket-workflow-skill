@@ -13,6 +13,7 @@ description: >
 
 1. **Never skip a phase.** Phases are sequential. Do not enter a phase before the previous one is complete and its output is written in full.
 2. **Run Phases 1 through 4 without stopping for approval.** Unless the user says otherwise, produce the Phase 1 spec table and the Phase 2 plan, then proceed straight through Phase 3 (implement) and Phase 4 (validate) without pausing to ask "should I continue?". The first stop for the human is Phase 5.
+2b. **Phase 6 runs on its own.** Once the user has passed every Phase 5 check, ship the ticket (restore data, safety check, review, commit, push, monitor CI, Jira to Code review, PR description) without asking. Pushing here is expected and needs no extra request.
 2a. **Phase 5 stops at every check.** The manual test plan is delivered interactively — one check per message, and the next check is not sent until the user reports the result of the current one. Never paste the whole plan at once.
 3. **Never claim validation without running commands.** Report the actual output of every linter, type check, and test run. No hypothetical success.
 4. **Always reference SPEC-IDs — in Phases 1 to 4 only.** Every plan step, every code change note and every coverage row must cite the SPEC-IDs it satisfies. Phase 5 is the exception: the manual test plan is written for a human and uses the ticket's own issue / AC numbering, never SPEC-IDs or TC-IDs.
@@ -188,7 +189,7 @@ One check = the smallest block of actions that ends in a single observable outco
 8. **Coverage per issue:** the failure the ticket reported, the happy path, then invalid input, permission/role variations, and empty or boundary states where they apply. Finish with a short set of regression checks for adjacent existing behaviour.
 9. **No redundant checks.** Before writing a check, confirm no earlier check already proved it. If the user points out an overlap, drop the duplicate and renumber that issue's checks rather than defending it.
 10. **Self-contained checks:** if a check needs setup that another fix provides, write that setup out as ordinary steps rather than pointing at another section.
-10a. **Do the data setup yourself.** If a check's setup is data or config you can change from the Rails console in the container (feature flags, tenant config, account settings, records), make that change yourself before sending the check, say in one line what you changed, and give the user only the confirmation steps. Restore it yourself when testing ends.
+10a. **Do the data setup yourself; give only direct steps.** Whenever a check's setup is data you can create, submit or change from the Rails console in the container (feature flags, tenant config, account settings, records, form submissions, moving reports), do it yourself before sending the check, say in one line what you changed, and give the user only the direct confirmation steps (open this URL, look at this). Never ask the user to fill forms or toggle settings you could set yourself. Restore it yourself when testing ends.
 11. **Final message:** once every check has passed (or been skipped), give a short recap — checks passed, anything skipped, anything fixed mid-run.
 
 ### Example output shape (Phase 5)
@@ -229,16 +230,24 @@ Pass or fail?
 
 ---
 
-## Phase 6 — Update the PR description
+## Phase 6 — Ship (automatic once every check passed)
 
-**Goal:** leave the PR describing the shipped work in the repo's required format.
+**Goal:** once the user has passed (or skipped) every Phase 5 check, finish the ticket without asking. The user only does the manual test; everything after it is yours.
 
-**Gate:** enter this phase only once every Phase 5 check has passed (or been explicitly skipped). Never write the PR description while checks are still outstanding.
+**Gate:** enter only when every Phase 5 check has passed or been explicitly skipped. Then run all steps below in order without stopping for approval. Stop only if a step fails and the fix is not obvious.
 
 Steps:
-1. Find the PR for the branch: `gh pr view --json number,title,url`. If there is no PR, do not open one — say so and hand the drafted body to the user to paste.
-2. Draft the body using the template (template: `templates/pr-description.md`): the `[JIRA ticket](…)` link with the real ticket key, then `## Motivation and Context` and `## Description of changes`, keeping the repo's HTML comment prompts and writing real prose under each.
-3. Group the change bullets by the ticket's own issue/AC numbering, in the ticket's order — the same structure Phase 5 used — and state the root cause of each fix, not just the symptom.
-4. Answer the template's prompts explicitly: performance impact (or "No performance impact.") and migrations (what it changes plus the runtime you observed, or "No migration.").
-5. Note in one line anything deliberately left out of scope, e.g. a security finding filed for a follow-up ticket.
-6. Post it with `gh pr edit <number> --body-file <file>`, then show the exact body that was posted in your reply.
+1. **Restore test data.** Revert any data or config you changed for testing (flags, settings, moved records) and confirm it from the console.
+2. **Safety check against the ticket.** Re-read the ticket and confirm every requirement, including any the user added during testing, is implemented and was proven by a check or a spec. List each one in a single line with its proof. If anything is missing, go back to Phase 3.
+3. **Final code review.** Review the full uncommitted diff as a hostile reviewer: correctness, edge cases, performance (e.g. work repeated on every render), dead code, scope. Fix what you find and re-run every automated check from Phase 4, reporting the real output.
+4. **Commit.** One commit per ticket, prefixed `[STOR-<n>]`, imperative subject, body explaining the root cause and the fix. Review-comment fixes always go in a separate commit. No Claude signature or co-author lines. Stage only this ticket's files.
+5. **Push** the branch, then **monitor CI** in the background until it is green or parked at the QA gate (never approve that gate). On a failure, fix it following the CI fix rules and monitor again.
+6. **Jira:** move the ticket to **Code review**.
+7. **Update the PR description** (template: `templates/pr-description.md`):
+   - Find the PR with `gh pr view --json number,title,url,commits,body`. If there is none, don't open one; hand the drafted body to the user.
+   - When the PR holds several tickets, keep one section per ticket, plus a table listing every commit with its ticket. Every ticket commit must have its part in the description. The only exception is review-response commits: mention them once in a line, then fold their effect into the sections they change.
+   - Re-read the existing sections and correct any statement that a later commit made untrue. Never leave stale behaviour in the description.
+   - Each section has the `[JIRA ticket](…)` link, then `## Motivation and Context` and `## Description of changes` with the repo's HTML comment prompts, bullets grouped by the ticket's own issue/AC order, and the root cause of each fix.
+   - Answer the template's prompts explicitly: performance impact (or "No performance impact.") and migrations (what it changes and the runtime you observed, or "No migration.").
+   - Post it with `gh pr edit <n> --body-file <file>`. If that fails (e.g. the "Projects (classic)" deprecation error), use `gh api -X PATCH repos/<owner>/<repo>/pulls/<n> -F body=@<file>`. Re-read the PR body to confirm it was posted.
+8. **Report** in a few lines: commit hash, CI state, Jira status, PR link, and anything deliberately left out of scope.
