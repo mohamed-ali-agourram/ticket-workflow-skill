@@ -19,7 +19,7 @@ Then a final group of regression checks. Never renumber or reorder the ticket's 
 
 ---
 
-## Message 1 — setup only
+## Message 1 — setup + check 1 (never ask if they're ready)
 
 ```markdown
 **Login:** append `?mcp_user_email=<email>` to any URL on `https://dev.example.localhost`.
@@ -31,7 +31,7 @@ created after this build; on an older record, set X first">
 
 Coverage: Issue 1 — <title> (N checks) · Issue 2 — <title> (N checks) · Regression (N checks).
 
-Tell me when setup is ready and I'll send the first check.
+<check 1, in the format below>
 ```
 
 ## Every following message — exactly one check

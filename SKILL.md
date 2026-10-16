@@ -174,7 +174,7 @@ One check = the smallest block of actions that ends in a single observable outco
 
 ### Protocol
 
-1. **Message 1 — setup only.** Give the login/preconditions block (real emails, roles, record ids, URLs from the environment — never placeholders), any caveat that would make a retest misleading (e.g. "this fix only applies to records created after this build; on an older record set X first"), and a one-line outline naming the issues to be covered *and how many checks each has*. No steps yet. Ask them to confirm setup is ready.
+1. **Message 1 — setup + check 1.** Give the login/preconditions block (real emails, roles, record ids, URLs from the environment — never placeholders), any caveat that would make a retest misleading (e.g. "this fix only applies to records created after this build; on an older record set X first"), and a one-line outline naming the issues to be covered *and how many checks each has*, followed directly by check 1 in the same message. Never ask whether they are ready — the user is always ready.
 2. **Then one message per check.** Each message contains, and contains only:
    - a heading line: `**Issue <n> — <ticket's wording> · check <i> of <n>**`
    - the numbered steps for that check
@@ -203,12 +203,6 @@ One check = the smallest block of actions that ends in a single observable outco
 
 Coverage: Issue 1 — Archive button (2 checks) · Issue 2 — Storefront visibility (1 check) · Regression (1 check).
 
-Ready when you are — tell me when you're logged in and I'll send the first check.
-```
-
-**Message 2 (after they confirm)**
-
-```markdown
 **Issue 1 — Archive button missing on product detail · check 1 of 2**
 
 1. As admin, go to `https://dev.example.localhost/products/1`
@@ -220,7 +214,7 @@ Ready when you are — tell me when you're logged in and I'll send the first che
 Pass or fail? If it fails, tell me what you saw.
 ```
 
-**Message 3 (only after their reply)**
+**Message 2 (only after their reply)**
 
 ```markdown
 **Issue 1 — Archive button missing on product detail · check 2 of 2**
