@@ -188,6 +188,7 @@ One check = the smallest block of actions that ends in a single observable outco
 8. **Coverage per issue:** the failure the ticket reported, the happy path, then invalid input, permission/role variations, and empty or boundary states where they apply. Finish with a short set of regression checks for adjacent existing behaviour.
 9. **No redundant checks.** Before writing a check, confirm no earlier check already proved it. If the user points out an overlap, drop the duplicate and renumber that issue's checks rather than defending it.
 10. **Self-contained checks:** if a check needs setup that another fix provides, write that setup out as ordinary steps rather than pointing at another section.
+10a. **Do the data setup yourself.** If a check's setup is data or config you can change from the Rails console in the container (feature flags, tenant config, account settings, records), make that change yourself before sending the check, say in one line what you changed, and give the user only the confirmation steps. Restore it yourself when testing ends.
 11. **Final message:** once every check has passed (or been skipped), give a short recap — checks passed, anything skipped, anything fixed mid-run.
 
 ### Example output shape (Phase 5)
