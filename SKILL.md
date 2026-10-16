@@ -13,7 +13,7 @@ description: >
 
 1. **Never skip a phase.** Phases are sequential. Do not enter a phase before the previous one is complete and its output is written in full.
 2. **Run Phases 1 through 4 without stopping for approval.** Unless the user says otherwise, produce the Phase 1 spec table and the Phase 2 plan, then proceed straight through Phase 3 (implement) and Phase 4 (validate) without pausing to ask "should I continue?". The first stop for the human is Phase 5.
-2b. **Phase 6 runs on its own.** Once the user has passed every Phase 5 check, ship the ticket (restore data, safety check, review, commit, push, monitor CI, Jira to Code review, PR description) without asking. Pushing here is expected and needs no extra request.
+2b. **Phase 6 runs on its own.** Once the user has passed every Phase 5 check, ship the ticket (safety check, review, commit, push, monitor CI, Jira to Code review, PR description) without asking. Pushing here is expected and needs no extra request.
 2a. **Phase 5 stops at every check.** The manual test plan is delivered interactively — one check per message, and the next check is not sent until the user reports the result of the current one. Never paste the whole plan at once.
 3. **Never claim validation without running commands.** Report the actual output of every linter, type check, and test run. No hypothetical success.
 4. **Always reference SPEC-IDs — in Phases 1 to 4 only.** Every plan step, every code change note and every coverage row must cite the SPEC-IDs it satisfies. Phase 5 is the exception: the manual test plan is written for a human and uses the ticket's own issue / AC numbering, never SPEC-IDs or TC-IDs.
@@ -189,7 +189,7 @@ One check = the smallest block of actions that ends in a single observable outco
 8. **Coverage per issue:** the failure the ticket reported, the happy path, then invalid input, permission/role variations, and empty or boundary states where they apply. Finish with a short set of regression checks for adjacent existing behaviour.
 9. **No redundant checks.** Before writing a check, confirm no earlier check already proved it. If the user points out an overlap, drop the duplicate and renumber that issue's checks rather than defending it.
 10. **Self-contained checks:** if a check needs setup that another fix provides, write that setup out as ordinary steps rather than pointing at another section.
-10a. **Do the data setup yourself; give only direct steps.** Whenever a check's setup is data you can create, submit or change from the Rails console in the container (feature flags, tenant config, account settings, records, form submissions, moving reports), do it yourself before sending the check, say in one line what you changed, and give the user only the direct confirmation steps (open this URL, look at this). Never ask the user to fill forms or toggle settings you could set yourself. Restore it yourself when testing ends.
+10a. **Do the data setup yourself; give only direct steps.** Whenever a check's setup is data you can create, submit or change from the Rails console in the container (feature flags, tenant config, account settings, records, form submissions, moving reports), do it yourself before sending the check, say in one line what you changed, and give the user only the direct confirmation steps (open this URL, look at this). Never ask the user to fill forms or toggle settings you could set yourself. Leave it in place when testing ends: never revert test data unless the user asks.
 11. **Final message:** once every check has passed (or been skipped), give a short recap — checks passed, anything skipped, anything fixed mid-run.
 
 ### Example output shape (Phase 5)
@@ -237,7 +237,7 @@ Pass or fail?
 **Gate:** enter only when every Phase 5 check has passed or been explicitly skipped. Then run all steps below in order without stopping for approval. Stop only if a step fails and the fix is not obvious.
 
 Steps:
-1. **Restore test data.** Revert any data or config you changed for testing (flags, settings, moved records) and confirm it from the console.
+1. **Leave test data in place.** Do not revert the data or config you changed for testing; say in one line what was left changed.
 2. **Safety check against the ticket.** Re-read the ticket and confirm every requirement, including any the user added during testing, is implemented and was proven by a check or a spec. List each one in a single line with its proof. If anything is missing, go back to Phase 3.
 3. **Final code review.** Review the full uncommitted diff as a hostile reviewer: correctness, edge cases, performance (e.g. work repeated on every render), dead code, scope. Fix what you find and re-run every automated check from Phase 4, reporting the real output.
 4. **Commit.** One commit per ticket, prefixed `[STOR-<n>]`, imperative subject, body explaining the root cause and the fix. Review-comment fixes always go in a separate commit. No Claude signature or co-author lines. Stage only this ticket's files.
