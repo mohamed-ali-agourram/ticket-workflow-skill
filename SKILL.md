@@ -1,9 +1,15 @@
 ---
 name: ticket-workflow
 description: >
-  Takes a storiq Jira ticket from start to merged-ready PR: implements, tests, validates, walks the user through
-  manual checks, then commits, pushes, watches CI and updates Jira and the PR. Use when the user shares a ticket
-  key (e.g. STOR-1234), pastes requirements, or says QA sent it back or there are review comments to address.
+  End-to-end storiq ticket workflow. Usage: `/ticket-workflow STOR-1234` (or paste the ticket or requirements).
+  It fetches the ticket from Jira, finds any existing branch or PR, and picks a mode: new ticket, QA rework,
+  PR review comments, or resume. Then it runs on its own: analyzes the code, plans, implements with tests, and
+  validates with linters, specs and an independent code/security review. The first stop for the user is the
+  manual test, given one check per message and waiting for pass/fail; failures are fixed and re-checked. Once
+  every check passes it ships without asking: final spec/code check, commit (no Claude signature), push,
+  create or update the PR in the repo's format, Jira to Code review, and CI monitored until the OBT is deployed.
+  Use when the user shares a ticket key, pastes requirements, or says QA sent it back or there are review
+  comments to address.
 ---
 
 # Ticket Workflow (storiq)
