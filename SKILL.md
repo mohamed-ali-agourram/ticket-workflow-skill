@@ -1,9 +1,9 @@
 ---
 name: ticket-workflow
 description: >
-  Start this skill whenever the user pastes a Jira ticket, shares a ticket key (e.g. STOR-1234),
-  says "work on this ticket", "implement this", "pick up this story", "QA sent it back",
-  "address the review comments", or gives written requirements for a storiq dev task.
+  Takes a storiq Jira ticket from start to merged-ready PR: implements, tests, validates, walks the user through
+  manual checks, then commits, pushes, watches CI and updates Jira and the PR. Use when the user shares a ticket
+  key (e.g. STOR-1234), pastes requirements, or says QA sent it back or there are review comments to address.
 ---
 
 # Ticket Workflow (storiq)
