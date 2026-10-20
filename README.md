@@ -1,37 +1,28 @@
 # ticket-workflow
 
-A Claude Code skill that turns a ticket into shipped, verified work through six sequential phases:
+A Claude Code skill for storiq that turns a Jira ticket into shipped, verified work:
 
-1. **Analyze** — parse the ticket into a stable spec table (`SPEC-1`, `SPEC-2`, …), list ambiguities with the assumption chosen and the risk if wrong, and map each requirement to real files in the repo.
-2. **Plan** — an ordered, SPEC-mapped implementation plan covering migrations, permissions, performance and rollback.
-3. **Implement** — direct edits following the repo's own conventions, with a running summary of files created/modified/deleted.
-4. **Validate** — three separate passes (spec compliance, hostile code review, security review) plus every linter, type check and test suite the repo provides, with real command output.
-5. **Manual test plan** — delivered interactively, **one check per message**, never advancing until the tester reports the result. Grouped by the ticket's own issue/AC numbering.
-6. **PR description** — the repo's required format: Jira link, Motivation and Context, Description of changes, including migration runtime and performance impact.
+0. **Intake**: fetches the ticket (description, comments, sub-tasks, parent, attachments) from Jira and finds any existing branch or PR. It then picks a mode: **New**, **Rework** (QA sent it back), **Review** (PR review comments) or **Resume**.
+1. **Analyze**: a Sonnet `Explore` agent maps the code and every entry point to the behaviour. The output is a compact `SPEC-n → files` list plus assumptions.
+2. **Plan**: one line per step, plus a risks line when relevant.
+3. **Implement**: direct edits that follow repo conventions, including RSpec/Jest tests for the change.
+4. **Validate**: changed-files-only linters and specs run in the background while a fresh-context agent does a hostile code and security review. The output is a short coverage, review and checks summary.
+5. **Manual test**: one check per message, verified against the real UI, with the data setup done through the Rails console. Lives in `phases/5-manual-test.md`.
+6. **Ship**: automatic once every check passes. It does a safety check, a delta review, commits by mode, pushes, monitors CI, moves Jira to Code review and writes the PR description. Lives in `phases/6-ship.md`.
 
-Phases 1-4 run without stopping for approval. Phase 5 stops at every single check.
-
-## Install
-
-Drop the directory into your skills folder:
-
-```bash
-git clone <this repo> ~/.claude/skills/ticket-workflow
-```
-
-Then invoke it with `/ticket-workflow <ticket-url-or-key>`, or just paste a ticket — the skill's description triggers on ticket URLs, ticket keys, "work on this ticket", and similar.
+Phases 0-4 run without approval stops. Phase 5 stops at every check. Phase 6 runs by itself.
 
 ## Layout
 
 | Path | Purpose |
 |------|---------|
-| `SKILL.md` | The workflow: non-negotiable rules plus the six phases |
-| `templates/spec-table.md` | Phase 1 spec + ambiguity tables |
-| `templates/coverage-matrix.md` | Phase 4 spec-compliance matrix |
-| `templates/manual-test-plan.md` | Phase 5 interactive check-by-check protocol |
-| `templates/pr-description.md` | Phase 6 PR body format |
+| `SKILL.md` | Rules and Phases 0-4 (always loaded) |
+| `phases/5-manual-test.md` | Interactive manual test protocol (read on reaching Phase 5) |
+| `phases/6-ship.md` | Commit, push, CI, Jira and PR steps (read on reaching Phase 6) |
+| `templates/pr-description.md` | PR body format |
 
-## Notes
+## Install
 
-- Codebase-agnostic: conventions (test commands, linters, file layout) are discovered from the repo at runtime rather than hardcoded.
-- `templates/pr-description.md` references a Jira base URL — change it to your own instance.
+```bash
+git clone <this repo> ~/.claude/skills/ticket-workflow
+```

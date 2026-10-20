@@ -1,253 +1,114 @@
 ---
 name: ticket-workflow
 description: >
-  Start this skill whenever the user pastes a Jira ticket, shares a ticket ID/key (e.g. STOR-1234),
-  says "work on this ticket", "implement this", "pick up this story", "here are the requirements",
-  or provides written requirements for any dev task. Codebase-agnostic — discovers conventions
-  from the current repo at runtime.
+  Start this skill whenever the user pastes a Jira ticket, shares a ticket key (e.g. STOR-1234),
+  says "work on this ticket", "implement this", "pick up this story", "QA sent it back",
+  "address the review comments", or gives written requirements for a storiq dev task.
 ---
 
-# Ticket Workflow Skill
+# Ticket Workflow (storiq)
 
-## Rules (non-negotiable)
+Phases run in order: **0 Intake → 1 Analyze → 2 Plan → 3 Implement → 4 Validate → 5 Manual test → 6 Ship.**
+Phases 5 and 6 have their own files; read each one only when you reach it.
 
-1. **Never skip a phase.** Phases are sequential. Do not enter a phase before the previous one is complete and its output is written in full.
-2. **Run Phases 1 through 4 without stopping for approval.** Unless the user says otherwise, produce the Phase 1 spec table and the Phase 2 plan, then proceed straight through Phase 3 (implement) and Phase 4 (validate) without pausing to ask "should I continue?". The first stop for the human is Phase 5.
-2b. **Phase 6 runs on its own.** Once the user has passed every Phase 5 check, ship the ticket (safety check, review, commit, push, monitor CI, Jira to Code review, PR description) without asking. Pushing here is expected and needs no extra request.
-2a. **Phase 5 stops at every check.** The manual test plan is delivered interactively — one check per message, and the next check is not sent until the user reports the result of the current one. Never paste the whole plan at once.
-3. **Never claim validation without running commands.** Report the actual output of every linter, type check, and test run. No hypothetical success.
-4. **Always reference SPEC-IDs — in Phases 1 to 4 only.** Every plan step, every code change note and every coverage row must cite the SPEC-IDs it satisfies. Phase 5 is the exception: the manual test plan is written for a human and uses the ticket's own issue / AC numbering, never SPEC-IDs or TC-IDs.
-5. **Always flag assumptions.** Never silently resolve an ambiguity. State the assumption chosen and the risk if it's wrong. If the ambiguity is a genuine blocker (no reasonable default exists), ask before proceeding; otherwise pick the lowest-risk assumption, note it, and keep going.
-6. **Scope discipline.** If a needed change falls outside the plan, note it explicitly in the running summary (what, why, which files) and keep going — don't silently expand scope, but don't stop the run for it either unless it's a genuinely destructive or hard-to-reverse change.
+## Rules
 
----
-
-## Phase 1 — Analyze the ticket
-
-**Goal:** produce a complete, stable spec before any planning begins.
-
-Steps:
-1. Check the current git branch. If it is `develop`/`main` or a branch belonging to a different ticket, create (or switch to an existing) branch named `STOR-<ticket-number>-<short-description>` — no more than 25 characters total — for this ticket before doing anything else.
-2. Parse the ticket into: goal, functional requirements, acceptance criteria, implicit expectations, edge cases, explicit non-goals / out of scope.
-3. Assign each distinct requirement a stable ID: `SPEC-1`, `SPEC-2`, … Do not renumber or reuse IDs across the conversation.
-4. List every ambiguity and unstated assumption separately (see template). State the assumption chosen and the risk if wrong.
-5. Explore the repo to map specs to concrete code: read relevant files, grep for related symbols, check existing patterns and prior art. Name the actual files, models, migrations, API types/resolvers/endpoints, services, components, and tests likely involved.
-6. Output the completed spec table (template: `templates/spec-table.md`).
-
-**Gate:** Phase 1 is done when the spec table is written out in full. Do not proceed to Phase 2 until then.
-
-### Example output shape (Phase 1)
-
-**Goal:** Allow store managers to archive products.
-
-| SPEC-ID | Requirement | Source | Affected code |
-|---------|-------------|--------|---------------|
-| SPEC-1 | Store manager can archive a product via a button on the product detail page | Ticket AC #1 | `app/javascript/react/pages/product_detail/`, `ProductsController` |
-| SPEC-2 | Archived products are hidden from the storefront by default | Ticket description | `Product` model scope, `ProductsController#index` |
-| SPEC-3 | Admin can toggle archived products visible via a filter | Inferred from existing filter pattern | `app/javascript/react/components/filters/` |
-
-**Ambiguities:**
-
-| # | Ambiguity | Assumption chosen | Risk if wrong |
-|---|-----------|-------------------|---------------|
-| A1 | Does archiving cascade to variants? | No cascade — not mentioned | Medium |
+1. **No approval stops before Phase 5.** Go from Phase 0 straight through Phase 4. The user's first stop is the Phase 5 test. Ask earlier only for a genuine blocker (no reasonable default exists) or a destructive / hard-to-reverse step.
+2. **Phase 5 is one check per message**, gated on the user's pass/fail reply. **Phase 6 runs by itself** once every check has passed or been skipped. That includes commit, push, CI, Jira and PR.
+3. **Keep chat output short.** The user reads results, not bookkeeping. Spec lists, plans, coverage and reviews are compact: one line per item, no long tables, no restating the ticket. Never paste code blocks as the deliverable; edit files.
+4. **Evidence, not claims.** Never say a check passed without running it. Show the command and its result line (e.g. `12 examples, 0 failures`), not the full log.
+5. **SPEC-IDs in Phases 1-4 only.** Phase 5 and the PR use the ticket's own Issue / AC numbering.
+6. **Assumptions are flagged, never silently resolved.** Pick the lowest-risk default, state it with its risk, and keep going.
+7. **Close every path to the ticket's behaviour in the same change.** That means UI buttons, alternate entry points, direct URLs (controller guard), GraphQL mutations and use cases (`validate!`). Never write "out of scope / follow-up ticket" for a hole that defeats the ticket's goal.
+8. **Scope growth: ask first.** If you find a gap that is related to the ticket but not part of it, or the work grows well beyond the plan, report it in one line and ask before starting. Don't run silently for a long time; give a one-line status at each milestone.
+9. **Reuse before you add.** Before adding a filter, flag, helper or component, grep for an existing one and use it.
+10. **Never** disable lint/RuboCop rules, bump dependencies, add Claude signatures to commits/PRs, push from a subagent, or approve CircleCI approval jobs.
 
 ---
+
+## Phase 0 — Intake (fetch and choose the mode)
+
+1. **Fetch the ticket** from Jira and flatten the ADF description to plain text with Python:
+   ```bash
+   source ~/.config/jira/credentials
+   curl -s -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" "$JIRA_SITE/rest/api/3/issue/STOR-<n>?fields=summary,description,status,parent,subtasks,issuelinks,comment,attachment"
+   ```
+   Read the comments too, and the parent ticket if this is a sub-task (QA sub-tasks hold the original requirements in their parent). For image attachments that matter, download them to the scratchpad and look at them.
+2. **Look for existing work:** `git branch -a --list "*<n>*" "*<parent-n>*"`, `git log develop..<branch> --oneline` and `gh pr list --head <branch> --json number,url,reviewDecision`.
+3. **Pick the mode:**
+
+   | Situation | Mode | What to do |
+   |---|---|---|
+   | No branch yet, or its PR is already merged | **New** | Branch `STOR-<n>-<short-desc>` (≤ 25 chars) off `develop`. Then Phase 1. |
+   | QA sub-task, or ticket in `QA Rework` / `Code Rework`, with an existing branch | **Rework** | Check out the existing branch. Phase 1 covers only the reported issues. Fixes are amended into that ticket's commit (Phase 6). |
+   | Open PR with unresolved review comments the user wants addressed | **Review** | Fetch them with `gh api repos/cowcross/storiq/pulls/<pr>/comments`. Each comment is a SPEC. Fixes go in a **separate** commit. Phase 5 tests only behaviour that changed. |
+   | Branch with uncommitted work for this ticket | **Resume** | Find out which phase was reached from the diff and continue from there. |
+
+4. **Before switching branches:** if the working tree has another ticket's uncommitted work, don't stash or discard it. Ask, offering a worktree via `/wt`.
+5. **Jira:** in New mode, if the ticket is `Open`, `Staged` or `Reopened`, move it to in progress (the transition named `In Progress…`). Find the id with `GET .../issue/STOR-<n>/transitions` and `POST` it.
+
+## Phase 1 — Analyze
+
+1. **Delegate the code mapping** to an `Explore` agent with `model: "sonnet"` so file dumps stay out of the main context. Give it the ticket text and ask it to return, with `file:line`:
+   - the code that implements each requirement today
+   - **every entry point** that reaches the affected behaviour: React pages/links, routes, controllers, GraphQL queries/mutations, use cases, jobs
+   - existing patterns, filters, flags or hooks that can be reused
+   - existing specs that cover the area
+
+   For a small ticket (one or two obvious files) skip the agent and read them directly.
+2. Split the ticket into requirements `SPEC-1, SPEC-2…` (stable for the rest of the conversation). Include the implicit ones: edge cases, permissions, empty states.
+3. **Output (compact):**
+   ```
+   SPEC-1 <requirement> (AC 1) → app/…/foo.rb, app/javascript/…/Bar.tsx
+   SPEC-2 …
+   Assumptions: A1 <assumption chosen> — risk <low|med|high>
+   ```
 
 ## Phase 2 — Plan
 
-**Goal:** produce an ordered, SPEC-mapped implementation plan, then move straight into Phase 3.
-
-Steps:
-1. Derive an ordered list of implementation steps from the spec table. Each step must:
-   - Reference the SPEC-ID(s) it satisfies.
-   - Name the exact files it touches and the type of change (add / modify / delete).
-2. Cover explicitly: data/migration impact, backwards compatibility, permissions/authorization impact, performance concerns (N+1 risk, index needs), rollback considerations.
-3. Call out risks and anything that could break existing behavior.
-4. **Present the plan, then continue directly into Phase 3** unless the user has asked to review plans before implementation on this task.
-
-### Example output shape (Phase 2)
-
-**Step 1** _(SPEC-1, SPEC-2)_ — Add `archived` boolean column to `products` table.
-- Files: `db/migrate/YYYYMMDDHHMMSS_add_archived_to_products.rb`
-- Migration adds column with default `false`; no data backfill needed.
-
-**Step 2** _(SPEC-2)_ — Add `active` default scope to `Product` model.
-- Files: `app/models/product.rb`
-- Risk: any code doing `Product.unscoped` will still work; callers relying on default scope will be unaffected.
-
-_(…)_
-
-> Proceeding directly to Phase 3.
-
----
+Write an ordered list of steps, one line each: `<n>. (SPEC-x) <change> — <files>`. Add a single `Risks:` line only when something applies: migration (and its rollback), permissions/tenant scoping, N+1/indexes, backwards compatibility. Then go straight into Phase 3.
 
 ## Phase 3 — Implement
 
-**Goal:** make direct edits to the codebase, scoped exactly to the approved plan.
-
-Steps:
-1. Edit files directly. Never dump implementation code blocks in chat as the deliverable.
-2. Follow the repo's existing conventions: naming, file structure, error handling, i18n, testing style. Discover these by reading the surrounding code, not by assuming.
-3. Report a running summary after each logical unit of work:
-   - Created: `path/to/new_file.rb`
-   - Modified: `path/to/existing.tsx` — added ArchiveButton component
-   - Deleted: _(if any)_
-4. If a needed change is discovered that is outside the plan, state it explicitly in the running summary and keep going, unless it's destructive or hard to reverse — in that case, pause and check with the user.
-
----
+1. Edit files directly. Match the surrounding code and CLAUDE.md conventions: use cases in `app/src/services`, i18n for every string, CDS components, the data hooks, no new comments.
+2. **Write tests for the change.** Use RSpec for backend behaviour (use cases, models, controllers/resolvers, permissions) and Jest for non-trivial pure functions or components. In Rework/Review mode, add a spec that reproduces the reported bug when that's feasible.
+3. After each logical unit, write one line: `Modified app/…/x.rb — <what>`.
+4. Rails console data checks: `docker exec storiq-web-1 bin/rails runner "…"`.
 
 ## Phase 4 — Validate
 
-**Goal:** independent verification that the implementation is correct, complete, and safe.
+Run these in parallel:
 
-Three mandatory passes — do not merge them:
+- **Automated checks**, started with `run_in_background`, limited to what changed. Run them inside `storiq-web-1` like the rest of the dev env:
+  - `bundle exec rubocop <changed .rb files>`
+  - `yarn eslint <changed .ts/.tsx files>`
+  - `bin/rspec <new + related specs>`
+  - `yarn jest <new + related specs>`
+  - `bin/rails db:migrate` + rollback + migrate when a migration was added (note the runtime; see the schema.rb memory)
+- **Independent review:** spawn one fresh `general-purpose` agent (default model). Pass it the ticket text, the SPEC list and the branch name, and tell it to review `git diff develop...HEAD` plus the uncommitted diff as a hostile senior reviewer. It should cover:
+  1. every SPEC implemented
+  2. every entry point from Phase 1 guarded (Rule 7)
+  3. correctness and edge cases
+  4. authz and tenant/org-unit scoping, IDOR, mass assignment, injection, XSS
+  5. N+1 and work repeated per render
+  6. dead code, duplication, reuse of existing helpers
+  7. missing tests
 
-### Pass 1 — Spec compliance
-Output the coverage matrix (template: `templates/coverage-matrix.md`).
-- Every SPEC-ID must appear.
-- Any row with "No" in "Implemented?" → return to Phase 3. No partial completion accepted.
+  Ask for real findings only, each with `file:line`, severity and a fix, and no praise or style nitpicks covered by linters. It must not edit files.
 
-### Pass 2 — Code review
-Review as a hostile senior reviewer, not as the author. Cover:
-- Correctness and logic errors
-- Edge cases and missing guards
-- Error handling
-- Dead code, duplication, unnecessary abstraction
-- Naming and readability
-- N+1 queries and other performance traps
-- Missing or inadequate tests
-- Breakage of existing behavior
-
-### Pass 3 — Security review
-- Authentication and authorization checks present
-- Tenant / store / data scoping — no cross-tenant data leaks
-- Mass assignment protection
-- SQL/GraphQL injection vectors
-- Unsafe deserialization
-- XSS and unescaped output
-- IDOR (insecure direct object references)
-- Secrets or credentials in code
-- Over-permissive API responses
-- Input validation and sanitization
-- Rate limiting where relevant
-
-### Automated checks
-Detect what the repo provides (linters, formatters, type checks, test suite) by reading `package.json`, `Gemfile`, `Makefile`, CI config, etc. Run every applicable check. Report the actual command and its output. Never summarize as "tests pass" without showing evidence.
-
-**End of Phase 4:** explicit verdict — **PASS** (all three passes clean, all checks green) or **FAIL** (itemized reasons, return to Phase 3).
-
-### Example output shape (Phase 4)
-
-**Coverage matrix:** _(see templates/coverage-matrix.md)_
-
-**Code review findings:**
-- `product.rb:55` — `archived` scope missing index on column. Added `add_index` to migration.
-- No other issues.
-
-**Security review findings:**
-- `ProductsController#archive` — missing `authorize!` call before update. Fixed.
-
-**Automated checks:**
+Fix the confirmed findings and re-run only the affected checks. **Output:**
 ```
-$ bin/rspec spec/models/product_spec.rb
-...........
-11 examples, 0 failures
-$ yarn eslint app/javascript/react/pages/product_detail/
-No ESLint warnings or errors.
+Coverage: SPEC-1 ✓ foo.rb:42 · SPEC-2 ✓ Bar.tsx:88 · …
+Review: <n> findings fixed — <one line each> (or "no findings")
+Checks: rubocop ✓ (3 files) · eslint ✓ · rspec 14 examples, 0 failures · jest 6 passed
+Verdict: PASS
 ```
+Any SPEC not covered, or any red check → back to Phase 3.
 
-**Verdict: PASS**
+## Phase 5 — Manual test
 
----
+Read `phases/5-manual-test.md` and follow it.
 
-## Phase 5 — Manual test plan (interactive, one check at a time)
+## Phase 6 — Ship
 
-**Goal:** walk the human tester (the user) through verification **one check at a time**, never advancing until they confirm the result.
-
-This phase is written for a human, not for the process. Drop the internal bookkeeping — SPEC-IDs, TC-IDs and coverage matrices belong to Phases 1-4 and must not appear here.
-
-**Never dump the whole plan in one message.** Build the full plan internally, then release it check by check.
-
-### Definition of a check
-
-One check = the smallest block of actions that ends in a single observable outcome. Actions with nothing to observe are not a check on their own — fold them into the check whose outcome they set up. A check is usually 1-5 steps and always has exactly one **Expected:** line.
-
-### Protocol
-
-1. **Message 1 — setup + check 1.** Give the login/preconditions block (real emails, roles, record ids, URLs from the environment — never placeholders), any caveat that would make a retest misleading (e.g. "this fix only applies to records created after this build; on an older record set X first"), and a one-line outline naming the issues to be covered *and how many checks each has*, followed directly by check 1 in the same message. Never ask whether they are ready — the user is always ready.
-2. **Then one message per check.** Each message contains, and contains only:
-   - a heading line: `**Issue <n> — <ticket's wording> · check <i> of <n>**`
-   - the numbered steps for that check
-   - one bold **Expected:** line
-   - a closing prompt to reply pass/fail (with what they saw if it fails)
-3. **Always give full, copy-pasteable URLs — never bare paths.** Write `https://dev.example.localhost/reports/33/edit`, not `/reports/33/edit`, and append the login parameter whenever the step involves a different user (e.g. `?mcp_user_email=store@manager.com`). Discover the environment's real base URL from the repo or the user rather than assuming one.
-4. **Do not send the next check until the user replies.** No batching, no "and then also try…", no previewing later checks. Their reply is the gate.
-5. **On pass:** record it and send the next check.
-6. **On fail:** stop advancing. Diagnose, fix, run the automated checks again, then re-issue *that same check* for retest. Only move on once it passes or the user explicitly says to skip it.
-7. **Order:** follow the ticket's own structure in the ticket's exact order — numbered issues → `Issue <n>`, numbered acceptance criteria → `AC <n>`. Never invent your own ordering or numbering.
-8. **Coverage per issue:** the failure the ticket reported, the happy path, then invalid input, permission/role variations, and empty or boundary states where they apply. Finish with a short set of regression checks for adjacent existing behaviour.
-9. **No redundant checks.** Before writing a check, confirm no earlier check already proved it. If the user points out an overlap, drop the duplicate and renumber that issue's checks rather than defending it.
-10. **Self-contained checks:** if a check needs setup that another fix provides, write that setup out as ordinary steps rather than pointing at another section.
-10a. **Do the data setup yourself; give only direct steps.** Whenever a check's setup is data you can create, submit or change from the Rails console in the container (feature flags, tenant config, account settings, records, form submissions, moving reports), do it yourself before sending the check, say in one line what you changed, and give the user only the direct confirmation steps (open this URL, look at this). Never ask the user to fill forms or toggle settings you could set yourself. Leave it in place when testing ends: never revert test data unless the user asks.
-11. **Final message:** once every check has passed (or been skipped), give a short recap — checks passed, anything skipped, anything fixed mid-run.
-
-### Example output shape (Phase 5)
-
-**Message 1**
-
-```markdown
-**Login:** append `?mcp_user_email=<email>` to any URL on `https://dev.example.localhost`.
-- Admin: `admin@example.com`
-- Store manager: `store@manager.com` (org unit `Frank Canyon`)
-
-**Note:** the archive default only applies to products created after this build.
-
-Coverage: Issue 1 — Archive button (2 checks) · Issue 2 — Storefront visibility (1 check) · Regression (1 check).
-
-**Issue 1 — Archive button missing on product detail · check 1 of 2**
-
-1. As admin, go to `https://dev.example.localhost/products/1`
-2. Click **Archive**
-3. Confirm the dialog
-
-**Expected:** toast "Product archived"; the button changes to **Unarchive**.
-
-Pass or fail? If it fails, tell me what you saw.
-```
-
-**Message 2 (only after their reply)**
-
-```markdown
-**Issue 1 — Archive button missing on product detail · check 2 of 2**
-
-1. Click **Unarchive**
-
-**Expected:** toast "Product restored"; the button changes back to **Archive**.
-
-Pass or fail?
-```
-
----
-
-## Phase 6 — Ship (automatic once every check passed)
-
-**Goal:** once the user has passed (or skipped) every Phase 5 check, finish the ticket without asking. The user only does the manual test; everything after it is yours.
-
-**Gate:** enter only when every Phase 5 check has passed or been explicitly skipped. Then run all steps below in order without stopping for approval. Stop only if a step fails and the fix is not obvious.
-
-Steps:
-1. **Leave test data in place.** Do not revert the data or config you changed for testing; say in one line what was left changed.
-2. **Safety check against the ticket.** Re-read the ticket and confirm every requirement, including any the user added during testing, is implemented and was proven by a check or a spec. List each one in a single line with its proof. If anything is missing, go back to Phase 3.
-3. **Final code review.** Review the full uncommitted diff as a hostile reviewer: correctness, edge cases, performance (e.g. work repeated on every render), dead code, scope. Fix what you find and re-run every automated check from Phase 4, reporting the real output.
-4. **Commit.** One commit per ticket, prefixed `[STOR-<n>]`, imperative subject, body explaining the root cause and the fix. Review-comment fixes always go in a separate commit. No Claude signature or co-author lines. Stage only this ticket's files.
-5. **Push** the branch, then **monitor CI** in the background until it is green or parked at the QA gate (never approve that gate). On a failure, fix it following the CI fix rules and monitor again.
-6. **Jira:** move the ticket to **Code review**.
-7. **Update the PR description** (template: `templates/pr-description.md`):
-   - Find the PR with `gh pr view --json number,title,url,commits,body`. If there is none, don't open one; hand the drafted body to the user.
-   - When the PR holds several tickets, keep one section per ticket, plus a table listing every commit with its ticket. Every ticket commit must have its part in the description. The only exception is review-response commits: mention them once in a line, then fold their effect into the sections they change.
-   - Re-read the existing sections and correct any statement that a later commit made untrue. Never leave stale behaviour in the description.
-   - Each section has the `[JIRA ticket](…)` link, then `## Motivation and Context` and `## Description of changes` with the repo's HTML comment prompts, bullets grouped by the ticket's own issue/AC order, and the root cause of each fix.
-   - Answer the template's prompts explicitly: performance impact (or "No performance impact.") and migrations (what it changes and the runtime you observed, or "No migration.").
-   - Post it with `gh pr edit <n> --body-file <file>`. If that fails (e.g. the "Projects (classic)" deprecation error), use `gh api -X PATCH repos/<owner>/<repo>/pulls/<n> -F body=@<file>`. Re-read the PR body to confirm it was posted.
-8. **Report** in a few lines: commit hash, CI state, Jira status, PR link, and anything deliberately left out of scope.
+Once every check has passed or been skipped, read `phases/6-ship.md` and follow it.
