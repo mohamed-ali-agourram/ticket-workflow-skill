@@ -1,9 +1,14 @@
 # PR Description
 
-1. Find the PR: `gh pr view --json number,title,url,commits,body`. If there is none, don't open one; hand the body to the user.
-2. Re-read the existing body. Correct any statement a later commit made untrue.
-3. A PR can hold several tickets. Keep one section per ticket, plus a table of every commit with its ticket. Every ticket commit gets its part. Review-response commits get one line, and their effect is folded into the sections they change.
-4. Write to a file in the scratchpad and post it with `gh pr edit <n> --body-file <file>`. If that errors (e.g. the "Projects (classic)" deprecation), use `gh api -X PATCH repos/cowcross/storiq/pulls/<n> -F body=@<file>`. Confirm with `gh pr view <n> --json body`.
+1. Find the PR: `gh pr view --json number,title,url,commits,body`.
+2. **No PR yet → create one** following the PR conventions memory. Write the body (below) to a scratchpad file first, then:
+   ```bash
+   gh pr create --base develop --title "[STOR-<n>] <imperative summary>" --body-file <file> [--label smart_reports]
+   ```
+   Don't use draft mode or set reviewers/assignees. Add the `smart_reports` label only for Smart Reports work.
+3. **PR exists → update it.** Re-read the existing body and correct any statement a later commit made untrue.
+4. A PR can hold several tickets (e.g. the Smart Reports grouping PR). Keep one section per ticket, plus the table of every commit with its ticket. Every ticket commit gets its part. Review-response commits get one line, and their effect is folded into the sections they change.
+5. Post it with `gh pr edit <n> --body-file <file>`. If that errors (e.g. the "Projects (classic)" deprecation), use `gh api -X PATCH repos/cowcross/storiq/pulls/<n> -F body=@<file>`. Confirm with `gh pr view <n> --json body`.
 
 ## Shape (per ticket)
 

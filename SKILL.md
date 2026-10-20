@@ -39,7 +39,7 @@ Phases 5 and 6 have their own files; read each one only when you reach it.
 
    | Situation | Mode | What to do |
    |---|---|---|
-   | No branch yet, or its PR is already merged | **New** | Branch `STOR-<n>-<short-desc>` (≤ 25 chars) off `develop`. Then Phase 1. |
+   | No branch yet, or its PR is already merged | **New** | If the ticket belongs to an epic that has a grouping branch (see the PR conventions memory, e.g. Smart Reports → `STOR-9815-smart-reports`), work on that branch. Otherwise branch `STOR-<n>-<short-desc>` (≤ 25 chars) off `develop`. Then Phase 1. |
    | QA sub-task, or ticket in `QA Rework` / `Code Rework`, with an existing branch | **Rework** | Check out the existing branch. Phase 1 covers only the reported issues. Fixes are amended into that ticket's commit (Phase 6). |
    | Open PR with unresolved review comments the user wants addressed | **Review** | Fetch them with `gh api repos/cowcross/storiq/pulls/<pr>/comments`. Each comment is a SPEC. Fixes go in a **separate** commit. Phase 5 tests only behaviour that changed. |
    | Branch with uncommitted work for this ticket | **Resume** | Find out which phase was reached from the diff and continue from there. |

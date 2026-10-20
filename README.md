@@ -8,7 +8,7 @@ A Claude Code skill for storiq that turns a Jira ticket into shipped, verified w
 3. **Implement**: direct edits that follow repo conventions, including RSpec/Jest tests for the change.
 4. **Validate**: changed-files-only linters and specs run in the background while a fresh-context agent does a hostile code and security review. The output is a short coverage, review and checks summary.
 5. **Manual test**: one check per message, verified against the real UI, with the data setup done through the Rails console. Lives in `phases/5-manual-test.md`.
-6. **Ship**: automatic once every check passes. It does a safety check, a delta review, commits by mode, pushes, monitors CI, moves Jira to Code review and writes the PR description. Lives in `phases/6-ship.md`.
+6. **Ship**: automatic once every check passes. It does a safety check, a delta review, commits by mode, pushes, creates or updates the PR, monitors CI until the OBT is deployed (never approving QA gates) and moves Jira to Code review once tests are green. Lives in `phases/6-ship.md`.
 
 Phases 0-4 run without approval stops. Phase 5 stops at every check. Phase 6 runs by itself.
 
