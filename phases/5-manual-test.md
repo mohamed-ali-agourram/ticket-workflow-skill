@@ -6,7 +6,7 @@ This is written for a human tester. Leave out SPEC-IDs, TC-IDs, tables and cover
 
 1. **Build the whole plan internally**, but release it one check at a time.
 2. **Verify every step against the code.** Read the page/component for its real labels, defaults and required inputs (e.g. a field that must be filled before a query runs). Inexact steps waste a test round.
-3. **Do the data setup yourself.** If a check needs data or config the Rails console can create or change (feature flags, tenant/account settings, records, form submissions, report moves), do it with `docker exec storiq-web-1 bin/rails runner "…"` and say what changed in one line. Leave it in place afterwards; never revert test data unless asked.
+3. **Do the data setup yourself.** If a check needs data or config the project console can create or change (feature flags, tenant/account settings, records, form submissions), do it there and say what changed in one line. Leave it in place afterwards; never revert test data unless asked.
 4. **Use real data.** Query for real emails, record ids, names and URLs. Never use placeholders.
 
 ## What counts as a check
@@ -21,17 +21,17 @@ A check is the smallest set of actions that ends in one observable outcome: usua
 
 ## URLs and login
 
-- Every URL is full and copy-pasteable: `https://dev.storiq.localhost/…`, never a bare path.
-- **Admin is already logged in.** Don't add `mcp_user_email` for admin. Add `?mcp_user_email=<email>` only when the check needs a different user.
+- Every URL is full and copy-pasteable, using the dev base URL from CLAUDE.md/memory, never a bare path.
+- **The default user is already logged in.** Add the project's user-switch mechanism (e.g. a login query param) only when the check needs a different user.
 
 ## Protocol
 
-1. **Message 1:** preconditions (non-admin users with their org unit, what you changed in the data) and any caveat that would make a retest misleading (e.g. "only records created after this build"). Add a one-line outline, `Issue 1 — <title> (2 checks) · Issue 2 — … · Regression (1)`, then **check 1 in the same message**. Never ask whether the user is ready.
+1. **Message 1:** preconditions (non-default users with their role/scope, what you changed in the data) and any caveat that would make a retest misleading (e.g. "only records created after this build"). Add a one-line outline, `Issue 1 — <title> (2 checks) · Issue 2 — … · Regression (1)`, then **check 1 in the same message**. Never ask whether the user is ready.
 2. **Each later message is exactly one check:**
    ```markdown
    **Issue <n> — <ticket wording> · check <i> of <total>**
 
-   1. Go to `https://dev.storiq.localhost/exact/path`
+   1. Go to `https://<dev-host>/exact/path`
    2. Click **Exact Label**
 
    **Expected:** exact text / UI state.
