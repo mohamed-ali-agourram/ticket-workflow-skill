@@ -42,6 +42,7 @@ If a binding is missing, work it out once from the repo (CLAUDE.md, CI config, P
 8. **Scope growth: ask first.** If you find a gap that is related to the ticket but not part of it, or the work grows well beyond the plan, report it in one line and ask before starting. Don't run silently for a long time; give a one-line status at each milestone.
 9. **Reuse before you add.** Before adding a filter, flag, helper or component, grep for an existing one and use it.
 10. **Never** disable lint rules, bump dependencies, add Claude signatures to commits/PRs, push from a subagent, or approve CI approval gates that belong to QA or other people.
+11. **Second agents are Codex, not Claude.** Any delegated or parallel work (code mapping, independent review, side investigations, parallel fixes) runs as a background `codex exec --yolo -C <dir> -o <scratchpad>/<name>.txt "<task>"`, then read the result file. Codex starts cold: put the full context and the user's rules in the task (no commit/push/env changes, git inside the container if the project says so, read-only unless editing is the task). Give parallel editors their own worktree. If Codex fails (usage/quota limit, auth error, non-zero exit, empty output), fall back to a Claude agent for that task and say so in one line. Split work across whatever agents are actually available; never block on a missing one. Verify every agent's output yourself before it reaches the user.
 
 ---
 
@@ -63,7 +64,7 @@ If a binding is missing, work it out once from the repo (CLAUDE.md, CI config, P
 
 ## Phase 1 — Analyze
 
-1. **Delegate the code mapping** to an `Explore` agent with `model: "sonnet"` so file dumps stay out of the main context. Give it the ticket text and ask it to return, with `file:line`:
+1. **Delegate the code mapping** to a read-only Codex agent (Rule 11; fallback an `Explore` agent with `model: "sonnet"`) so file dumps stay out of the main context. Give it the ticket text and ask it to return, with `file:line`:
    - the code that implements each requirement today
    - **every entry point** that reaches the affected behaviour: UI pages/links, routes, controllers/handlers, API queries/mutations, service layer, background jobs
    - existing patterns, filters, flags or hooks that can be reused
@@ -96,7 +97,7 @@ Run these in parallel:
   - linters on the changed files
   - new and related tests
   - when a migration was added: migrate, roll back, migrate again (note the runtime; follow any schema-file rule in memory)
-- **Independent review:** spawn one fresh `general-purpose` agent (default model). Pass it the ticket text, the SPEC list and the branch name, and tell it to review `git diff <base>...HEAD` plus the uncommitted diff as a hostile senior reviewer. It should cover:
+- **Independent review:** start one Codex agent in the background (Rule 11; fallback a fresh `general-purpose` agent, default model). Pass it the ticket text, the SPEC list and the branch name, and tell it to review `git diff <base>...HEAD` plus the uncommitted diff as a hostile senior reviewer. It should cover:
   1. every SPEC implemented
   2. every entry point from Phase 1 guarded (Rule 7)
   3. correctness and edge cases
