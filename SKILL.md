@@ -43,6 +43,7 @@ If a binding is missing, work it out once from the repo (CLAUDE.md, CI config, P
 9. **Reuse before you add.** Before adding a filter, flag, helper or component, grep for an existing one and use it.
 10. **Never** disable lint rules, bump dependencies, add Claude signatures to commits/PRs, push from a subagent, or approve CI approval gates that belong to QA or other people.
 11. **Second agents are Codex, not Claude.** Any delegated or parallel work (code mapping, independent review, side investigations, parallel fixes) runs as a background `codex exec --yolo -C <dir> -o <scratchpad>/<name>.txt "<task>"`, then read the result file. Codex starts cold: put the full context and the user's rules in the task (no commit/push/env changes, git inside the container if the project says so, read-only unless editing is the task). Give parallel editors their own worktree. If Codex fails (usage/quota limit, auth error, non-zero exit, empty output), fall back to a Claude agent for that task and say so in one line. Split work across whatever agents are actually available; never block on a missing one. Verify every agent's output yourself before it reaches the user.
+12. **Get a Codex second opinion whenever it's worth it**, without being asked: root-cause diagnoses, fix designs and plans, risky changes (migrations, permissions, performance rewrites), expected values in the Phase 5 checks, and any "done/correct" claim. Run it in parallel with your own work, report agreement or the disagreement in one line, and resolve a disagreement before acting.
 
 ---
 
