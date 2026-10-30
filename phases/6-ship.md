@@ -11,7 +11,7 @@ Run every step in order without asking. Stop only if a step fails and the fix is
    - **Migration:** commit the schema file following any schema-file rule in memory.
 4. **Push.** Use `--force-with-lease` when you rewrote history. If an approved PR loses its approval, say whose in one line afterwards.
 5. **PR.** Read `templates/pr-description.md` and follow it. It covers creating the PR when there is none and updating it when it already exists.
-6. **Monitor CI until the review/QA environment is deployed.** Run a background Monitor on the branch's latest PR pipeline, using the CI access and job names in memory (poll with Python if `jq` is missing).
+6. **Monitor CI until the review/QA environment is deployed.** Never poll CI yourself: hand it to a background second agent (Rule 11) working in its **own worktree** checked out detached at the pushed branch, so it never touches the main folder. Give it the CI access and job names in memory (poll with Python if `jq` is missing) and the rules below. It commits and pushes its own fixes without asking (`HEAD:<branch>` with `--force-with-lease=<branch>:<sha>` when it rewrote history). Keep working meanwhile; if it pushed, pull its commits before your next commit on the branch, and remove the worktree when it's done.
    - **Test jobs:** poll every ~2 min. When they're all green, **move the ticket to Code review** in the tracker.
    - **Approval gates** (e.g. QA capacity, passing/failing QA): they belong to QA or others. **Never approve one.** Keep polling slowly (~10 min) while the pipeline is on hold, and re-arm the monitor if it expires.
    - **Done** when the deploy-to-review-env job succeeds. Report the environment (with its URL if available) and the smoke test result.
